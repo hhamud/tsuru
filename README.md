@@ -1,6 +1,6 @@
 # tsuru
 
-High-throughput, `#![forbid(unsafe_code)]` parser for KRX MDF (Korean exchange market data) PCAP captures. Streams classic PCAP files (or `stdin`), extracts KOSPI200 `B6034` quote messages on UDP ports `15515` and `15516`, and prints a 5-level order book per line.
+High-throughput parser for KRX MDF (Korean exchange market data) PCAP captures. Streams classic PCAP files (or `stdin`), extracts KOSPI200 `B6034` quote messages on UDP ports `15515` and `15516`, and prints a 5-level order book per line.
 
 ## Build and run
 
@@ -30,7 +30,7 @@ HH:MM:SS.uuuuuu HH:MM:SS:uu ISIN <5 bids> <5 asks>
 
 ## Design decisions
 
-- **Streaming reader over `mmap`**: Reads into a single reusable 2 MiB buffer with zero `unsafe` code (`#![forbid(unsafe_code)]`). Supports regular files, pipes, and `stdin`, avoids `SIGBUS`/concurrent-truncation hazards, and keeps RSS constant (~5 MiB in streaming mode) regardless of capture size.
+- **Streaming reader over `mmap`**: Reads into a single reusable 2 MiB buffer with zero `unsafe` code. Supports regular files, pipes, and `stdin`, avoids `SIGBUS`/concurrent-truncation hazards, and keeps RSS constant (~5 MiB in streaming mode) regardless of capture size.
 - **Strict header validation**: Validates the 24-byte PCAP global header (little/big-endian, microsecond/nanosecond timestamps, rejecting PCAPNG with a clear error), link-layer framing (`Ethernet` with 802.1Q/QinQ VLAN unwrapping, `RawIp`, `LinuxSll`), IPv4 version/IHL/protocol (`UDP = 17`), fragmentation flags/offset, and IP/UDP lengths. Only non-fragmented UDP datagrams are parsed; fragmented IP packets are explicitly skipped.
 - **Zero-parse ASCII order formatting**: B6034 prices (5 ASCII digits) and quantities (7 ASCII digits) are emitted as decimal integers without leading zeros. Rather than parsing 20 fields per packet into binary integers and dividing back to ASCII, `tsuru` trims leading `'0'` bytes directly from the packet slice — eliminating 20 division loops per packet and avoiding integer truncation on 5-digit prices (`0..=99999`). Whole-second `HH:MM:SS.` prefixes are cached across packets, and microseconds are formatted via a 200-byte 2-digit lookup table.
 - **Centisecond timing wheel for `-r` reordering**: Because `accept_time` has 10ms resolution (`HHMMSSuu`), a 3-second reorder window contains at most ~300 distinct keys. Instead of an $O(\log N)$ unstable `BinaryHeap`, `-r` uses a 1024-slot ring buffer with a 128-byte occupancy bitmap:
