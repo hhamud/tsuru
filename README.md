@@ -41,18 +41,14 @@ HH:MM:SS.uuuuuu HH:MM:SS:uu ISIN <5 bids> <5 asks>
   - Allocated only when `-r` is passed.
 - **Minimal dependencies & single-stage output buffering**: Only `clap` and `anyhow` are required. Lines write directly into a single 1 MiB output buffer (no intermediate per-line `Vec` → `BufWriter` copy, and no custom allocator overhead on a hot path that doesn't allocate). Profiling symbols live in `[profile.profiling]` (`cargo build --profile profiling`) so release builds remain stripped and small.
 
-## Performance (v1 vs v2)
+## Performance
 
 Measured on a synthetic 201.4 MiB capture (800,000 packets, 640,134 B6034 quotes, 20% non-quote traffic, up to 1.2s out-of-order jitter, output to `/dev/null`, warm cache, median of 7 runs):
 
-| Metric | v1 (`mmap` + `BinaryHeap` + `mimalloc`) | v2 (streaming + timing wheel) | Change |
+| Mode | Median time | Throughput | Peak RSS |
 | --- | ---: | ---: | ---: |
-| Streaming (`no -r`) | 185.1 ms (1.06 GiB/s) | 142.2 ms (1.38 GiB/s) | **1.30× faster** |
-| Streaming peak RSS | 213.5 MB | 4.9 MB | **43× less RAM** |
-| Reorder (`-r`) | 389.1 ms (0.51 GiB/s) | 196.8 ms (1.00 GiB/s) | **1.98× faster** |
-| Reorder peak RSS | 225.0 MB | 39.4 MB | **5.7× less RAM** |
-| Reorder 10ms FIFO tie violations | 636,445 / 640,134 | **0** | Fixed |
-| Release binary size | 825 KB | 538 KB | **-35%** |
+| Streaming (`no -r`) | 142.2 ms | 1.38 GiB/s (4.50M quotes/s) | 4.9 MB |
+| Reorder (`-r`) | 196.8 ms | 1.00 GiB/s (3.25M quotes/s) | 39.4 MB |
 
 ## Testing
 
