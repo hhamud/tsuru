@@ -1,19 +1,21 @@
 [package]
 name = "tsuru"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
+description = "High-throughput KRX MDF (KOSPI200 B6034) PCAP quote parser"
 
 [dependencies]
 anyhow = "1.0.104"
 clap = { version = "4.6.4", features = ["derive"] }
-libc = "0.2.189"
-memmap2 = "0.9.11"
-mimalloc = "0.1.52"
-
 
 [profile.release]
-debug = true
 opt-level = 3
 lto = "fat"
 codegen-units = 1
 panic = "abort"
+strip = true
+
+[profile.profiling]
+inherits = "release"
+debug = true
+strip = false
